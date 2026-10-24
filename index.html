@@ -1,0 +1,1476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VMR Log — Prototype 2</title>
+<meta name="theme-color" content="#0E6B47">
+<meta name="description" content="Log diesel, repairs, delays and deliveries for VMR Trucking.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VMR Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ECEEEB; --surface:#FFFFFF; --ink:#151816; --muted:#59605C; --line:#CDD2CE;
+  --sign:#0E6B47; --sign-ink:#FFFFFF; --amber:#F2B705; --amber-ink:#1A1400;
+  --warn:#9A3412; --warn-bg:#FDEBDD; --ok:#0E6B47;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161A18; --surface:#222725; --ink:#F1F3F1; --muted:#A4ABA7; --line:#37403B;
+    --sign:#12804F; --warn:#FDBA8C; --warn-bg:#3B2416; --ok:#5BD69A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161A18; --surface:#222725; --ink:#F1F3F1; --muted:#A4ABA7; --line:#37403B;
+  --sign:#12804F; --warn:#FDBA8C; --warn-bg:#3B2416; --ok:#5BD69A; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.wrap{max-width:520px;margin:0 auto;padding:14px 16px 40px}
+
+/* Header styled like a highway guide sign */
+.sign{background:var(--sign);color:var(--sign-ink);border-radius:12px;padding:5px}
+.sign-inner{border:2px solid rgba(255,255,255,.9);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:700;font-size:40px;line-height:.9;letter-spacing:.02em}
+.brand small{display:block;font-family:var(--body);font-weight:500;font-size:14px;letter-spacing:0;opacity:.9;margin-top:4px}
+.sync{font-size:13px;text-align:right;opacity:.92;max-width:9em}
+.sync b{display:block;font-weight:600}
+
+.install{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--sign);border-radius:12px;padding:10px 8px 10px 10px;margin-top:12px}
+.install[hidden]{display:none}
+.install img{border-radius:9px;flex:none}
+.install-txt{flex:1;min-width:0;font-size:14px;line-height:1.3}
+.install-txt b{display:block;font-size:16px}
+.install-txt span{color:var(--muted)}
+.install-btn{border:0;border-radius:9px;background:var(--sign);color:var(--sign-ink);font-weight:600;padding:10px 14px}
+.install-x{border:0;background:transparent;color:var(--muted);font-size:18px;padding:8px}
+.steps{margin:0 0 16px;padding-left:22px}
+.steps li{margin-bottom:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;margin:14px 0 12px}
+.seg button{border:0;background:transparent;padding:10px;border-radius:7px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+.stats{display:grid;grid-template-columns:1.35fr 1fr;gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .k{font-size:14px;color:var(--muted)}
+.stat .v{font-family:var(--display);font-weight:700;font-size:40px;line-height:1.05;font-variant-numeric:tabular-nums}
+.stat .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{background:var(--amber);color:var(--amber-ink)}100%{}}
+
+.log{display:block;width:100%;margin:14px 0;border:0;border-radius:12px;background:var(--amber);color:var(--amber-ink);padding:18px 16px;text-align:left;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.log:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.log .t{font-family:var(--display);font-weight:700;font-size:44px;line-height:1}
+.log .d{font-size:15px;font-weight:500}
+
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;min-height:60px;text-align:left;text-decoration:none;color:var(--ink);font-weight:600;font-size:15px}
+.tile .ic{font-size:22px;line-height:1}
+.tile.later{color:var(--muted);font-weight:500}
+
+h2{font-family:var(--display);font-weight:700;font-size:24px;margin:24px 0 8px}
+.day{font-size:14px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.list li+li{border-top:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;padding:12px 14px;text-align:left}
+.row .ic{font-size:22px;width:28px;text-align:center}
+.row .mid{flex:1;min-width:0}
+.row .ttl{font-weight:600}
+.row .meta{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .amt{font-family:var(--display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--warn-bg);color:var(--warn);margin-left:6px;vertical-align:1px}
+.badge.ok{background:transparent;color:var(--ok);padding:0}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
+
+/* Bottom sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:20}
+.scrim.open{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--bg);border-radius:16px 16px 0 0;max-height:92vh;overflow:auto;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .22s ease-out;max-width:560px;margin:0 auto}
+.sheet.open{transform:none}
+@media (prefers-reduced-motion: reduce){.sheet{transition:none}.flash{animation:none}}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 10px}
+.sh-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sh-head h3{font-family:var(--display);font-weight:700;font-size:30px;margin:0}
+.x{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;font-weight:600}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat{display:flex;flex-direction:column;align-items:flex-start;gap:4px;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;min-height:96px;text-align:left}
+.cat .ic{font-size:28px}
+.cat b{font-family:var(--display);font-size:26px;line-height:1}
+.cat span{font-size:13px;color:var(--muted)}
+.cat.wide{grid-column:1/-1;min-height:70px;flex-direction:row;align-items:center;gap:12px}
+
+label.f{display:block;margin:0 0 14px}
+label.f > span{display:block;font-weight:600;margin-bottom:6px}
+label.f > span em{font-style:normal;font-weight:400;color:var(--muted)}
+.in{width:100%;border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 14px;font-size:18px}
+.in:focus{border-color:var(--sign);outline:none}
+.money{position:relative}
+.money::before{content:"$";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:var(--display);font-weight:700;font-size:34px;color:var(--muted)}
+.money .in{font-family:var(--display);font-weight:700;font-size:40px;padding-left:38px;font-variant-numeric:tabular-nums}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photos{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.ph{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed var(--line);background:var(--surface);border-radius:12px;min-height:110px;padding:10px;font-weight:600;font-size:15px;overflow:hidden}
+.ph .ic{font-size:26px}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph .re{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;font-size:12px;padding:3px 8px;border-radius:99px}
+.ph.has{border-style:solid;border-color:var(--sign)}
+.ph input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.toggle input{width:26px;height:26px;accent-color:var(--sign)}
+.hint{font-size:14px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:8px 12px;margin:-4px 0 14px}
+.save{width:100%;border:0;border-radius:12px;background:var(--sign);color:var(--sign-ink);padding:16px;font-family:var(--display);font-weight:700;font-size:28px}
+.save:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+.need{font-size:14px;color:var(--muted);text-align:center;margin-top:8px;min-height:1.4em}
+
+.detail dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0 0 14px}
+.detail dt{color:var(--muted)}
+.detail dd{margin:0;font-weight:500}
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.gallery button{border:0;padding:0;background:var(--line);border-radius:8px;overflow:hidden;aspect-ratio:1}
+.gallery img{width:100%;height:100%;object-fit:cover;display:block}
+.big img{width:100%;border-radius:10px;display:block;margin-bottom:10px}
+.del{width:100%;border:2px solid var(--warn);background:transparent;color:var(--warn);border-radius:12px;padding:12px;font-weight:600;margin-top:6px}
+
+.login{position:fixed;inset:0;z-index:30;background:var(--bg);overflow:auto;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 20px}
+.login[hidden]{display:none}
+.login-card{max-width:420px;margin:0 auto}
+.login-card h3{font-family:var(--display);font-weight:700;font-size:32px;margin:22px 0 4px}
+.lsub{color:var(--muted);margin:0 0 18px}
+.lerr{color:var(--warn);min-height:1.4em;margin:-4px 0 10px;font-size:15px}
+.sync{cursor:pointer;border:0;background:transparent;color:inherit;padding:4px 0 4px 8px;font-family:var(--body);font-size:13px;line-height:1.3}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:15px;z-index:40;max-width:90vw;display:none}
+.toast.show{display:block}
+
+.truckbar{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;text-align:left}
+.truckbar .ic{font-size:24px}
+.tb-txt{flex:1;min-width:0}
+.tb-txt small{display:block;color:var(--muted);font-size:13px}
+.tb-txt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:var(--muted);font-size:14px;font-weight:600}
+.tcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.tcard h4{margin:0 0 8px;font-size:17px}
+.tcard h4 span{font-weight:400;color:var(--muted);font-size:14px}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trio .k{font-size:13px;color:var(--muted)}
+.trio .v{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.trio .v.up{color:var(--warn)}
+.tfoot{font-size:14px;color:var(--muted);margin-top:8px}
+.note{font-size:13px;color:var(--muted);margin:4px 0 0}
+.calc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:-4px 0 14px;font-size:15px;display:grid;gap:4px}
+.calc b{font-family:var(--display);font-size:22px}
+.calc .warn{color:var(--warn);font-weight:500}
+select.in{appearance:auto;-webkit-appearance:menulist;font-size:17px}
+.check{display:flex;align-items:center;gap:10px;margin:-4px 0 14px;font-size:15px}
+.check input{width:22px;height:22px;accent-color:var(--sign)}
+.choices{display:grid;gap:8px;margin-bottom:14px}
+.choice{border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left;font-size:15px}
+.route{background:var(--surface);border:2px solid var(--sign);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.route-big{font-family:var(--display);font-weight:700;font-size:38px;line-height:1.05}
+.ghost{display:block;width:100%;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;font-weight:600;margin-top:10px}
+.tlist{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.trow{display:flex;align-items:center;gap:6px}
+.tpick{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:12px;text-align:left}
+.tpick[aria-pressed="true"]{border-color:var(--sign);box-shadow:inset 0 0 0 1px var(--sign)}
+.tpick .ic{font-size:22px}
+.tpick .mid{flex:1;min-width:0}
+.tpick small{display:block;color:var(--muted)}
+.tdel{border:0;background:transparent;color:var(--warn);font-weight:600;padding:8px;flex:none}
+.sub-h{font-family:var(--display);font-size:24px;margin:6px 0 10px}
+
+.alert{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--warn-bg);color:var(--warn);border:2px solid var(--warn);border-radius:12px;padding:10px 12px;margin-top:12px;font-size:15px}
+.alert[hidden]{display:none}
+.alert b{display:block;width:100%}
+.alert span{flex:1;min-width:200px}
+.alert button{border:0;border-radius:8px;background:var(--warn);color:var(--bg);font-weight:600;padding:8px 12px}
+.sync.bad b{color:#FFD7CC}
+.sync.warn b{color:var(--amber)}
+.formerr{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 14px;margin:0 0 14px;font-size:15px}
+.formerr[hidden]{display:none}
+.formerr ul{margin:6px 0 0;padding-left:20px}
+.invalid,.in.invalid{border-color:var(--warn)!important;border-style:solid!important}
+.ph.invalid{background:var(--warn-bg)}
+body.noscroll{overflow:hidden}
+.owner{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:auto;-webkit-overflow-scrolling:touch}
+.owner[hidden]{display:none}
+.owner-in{max-width:520px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px))}
+.owner-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.owner-head h3{font-family:var(--display);font-weight:700;font-size:28px;margin:0;flex:1;text-align:center}
+.ocards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ocard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.ocard.wide{grid-column:1/-1}
+.ocard .k{font-size:14px;color:var(--muted)}
+.ocard .v{font-family:var(--display);font-weight:700;font-size:34px;line-height:1.05;font-variant-numeric:tabular-nums}
+.ocard .v.neg{color:var(--warn)}
+.ocard .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.barrow{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
+.bar{height:10px;background:var(--line);border-radius:5px;margin:6px 0 8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--sign);border-radius:5px}
+.linkbtn{border:0;background:transparent;color:var(--sign);font-weight:600;padding:0;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="sign">
+    <div class="sign-inner">
+      <div class="brand">VMR<small>Trucking log · Prototype 2</small></div>
+      <button class="sync" id="sync" aria-label="Connection status"><b>Connecting…</b></button>
+    </div>
+  </header>
+
+  <div class="alert" id="alert" role="alert" hidden><b>Heads up</b><span id="alertMsg"></span><button id="alertRetry">Try again</button></div>
+
+  <div class="install" id="install" hidden>
+    
+    <div class="install-txt"><b>Get the VMR app</b><span>Add it to your home screen for one-tap logging.</span></div>
+    <button class="install-btn" id="installBtn">Install</button>
+    <button class="install-x" id="installX" aria-label="Not now">✕</button>
+  </div>
+
+  <button class="truckbar" id="truckBar"><span class="ic">🚛</span><span class="tb-txt"><small id="truckWho">Your truck</small><b id="truckName">Add your truck</b></span><span class="chev">Change</span></button>
+
+  <div class="seg" role="group" aria-label="Period">
+    <button id="pDay" aria-pressed="false">Today</button>
+    <button id="pWeek" aria-pressed="true">This week</button>
+  </div>
+
+  <section class="stats">
+    <div class="stat" id="totalBox">
+      <div class="k">Expenses</div>
+      <div class="v" id="total">$0</div>
+      <div class="sub" id="breakdown"></div>
+    </div>
+    <div class="stat">
+      <div class="k">Deliveries made</div>
+      <div class="v" id="deliv">0</div>
+      <div class="sub" id="delayTotal"></div>
+    </div>
+  </section>
+
+  <button class="log" id="logBtn">
+    <div class="t">Log</div>
+    <div class="d">Diesel, repair, delay, delivery, other</div>
+  </button>
+
+  <nav class="tiles" aria-label="Tools">
+    <button class="tile" id="tTrip"><span class="ic">🧭</span>Plan a trip</button>
+    <button class="tile" id="tReceipts"><span class="ic">📷</span>Receipts</button>
+    <button class="tile" id="tOwner"><span class="ic">🔒</span>Owner dashboard</button>
+    <button class="tile later" data-later="Accident report"><span class="ic">🚨</span>Accident report</button>
+  </nav>
+
+  <h2 id="listTitle">This week</h2>
+  <div id="list"></div>
+</div>
+
+<div class="owner" id="owner" hidden>
+  <div class="owner-in">
+    <div class="owner-head"><button class="x" id="oBack">← Back</button><h3>Owner</h3><button class="x" id="oLock">🔒 Lock</button></div>
+    <div class="seg" role="group" aria-label="Dashboard period">
+      <button id="opWeek" aria-pressed="true">This week</button>
+      <button id="opMonth" aria-pressed="false">This month</button>
+    </div>
+    <div id="oBody"></div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="grab"></div>
+  <div class="sh-head"><h3 id="shTitle"></h3><button class="x" id="shClose">Close</button></div>
+  <div id="shBody"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<style>
+.p2-test{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:14px}
+.p2-test p{margin:0 0 8px;color:var(--muted)}
+.p2-report-btn{padding:10px 14px;border:1px solid var(--sign);color:var(--sign);background:var(--surface);border-radius:8px;font-weight:600}
+#p2Dialog{width:min(540px,calc(100vw - 28px));max-height:90dvh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:18px;box-sizing:border-box;font-family:var(--body)}
+#p2Dialog::backdrop{background:rgba(0,0,0,.55)}
+#p2Dialog h2{margin:0;font-size:26px}
+#p2Dialog label{display:block;margin:12px 0 0;font-size:15px}
+#p2Dialog textarea{display:block;box-sizing:border-box;width:100%;min-height:65px;resize:vertical;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;margin-top:4px}
+#p2Dialog .p2-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+#p2History{padding-left:20px;overflow-wrap:anywhere;font-size:14px}
+#p2Preview{min-height:180px;font:12px monospace}
+#p2Feedback{min-height:1.5em;font-size:14px}
+</style>
+<dialog id="p2Dialog" aria-labelledby="p2Title">
+ <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 id="p2Title">Report a problem · P2</h2><button type="button" class="x" id="p2Close">Close</button></div>
+ <p>Describe a bug or a tracking total that looks wrong. Download the report and send it to the project team. Nothing is sent automatically.</p>
+ <label>What were you testing?<textarea id="p2Task" maxlength="2000" placeholder="Example: logging diesel for Truck 1"></textarea></label>
+ <label>Steps to repeat the problem<textarea id="p2Steps" maxlength="4000" placeholder="1. Open Log. 2. Choose Diesel…"></textarea></label>
+ <label>What did you expect?<textarea id="p2Expected" maxlength="2000"></textarea></label>
+ <label>What actually happened?<textarea id="p2Actual" maxlength="4000"></textarea></label>
+ <p class="note">The report includes recent errors, screen names, browser details and connection status. It excludes your saved entries, photos and passwords. Error text and anything you type may contain private information: review the preview before sharing.</p>
+ <details><summary>Recent automatic errors (<span id="p2Count">0</span>)</summary><ol id="p2History"></ol><button type="button" class="p2-report-btn" id="p2Clear">Clear error history</button></details>
+ <details><summary>Review report before sharing</summary><textarea id="p2Preview" readonly aria-label="Report preview"></textarea></details>
+ <div class="p2-actions"><button type="button" class="p2-report-btn" id="p2Download">Download report</button><button type="button" class="p2-report-btn" id="p2Copy">Copy report</button></div>
+ <p id="p2Feedback" role="status" aria-live="polite"></p>
+</dialog>
+<script>
+(() => {
+ 'use strict';
+ const BUILD = 'P2-2026-10-24.1', KEY = 'vmr-p2-diagnostics-v1';
+ const $ = id => document.getElementById(id);
+ let events = [], action = 'Opening Prototype 2', lastFingerprint = '', storageNotice = '';
+ try { const saved = JSON.parse(localStorage.getItem(KEY) || '[]'); if (Array.isArray(saved)) events = saved.filter(x => x && typeof x.message === 'string').slice(-50); }
+ catch { storageNotice = 'Error history is available for this session only; stored history could not be read.'; }
+ function clean(value){return String(value ?? '').replace(/([?&](?:key|api_key|token|access_token|password)=)[^&\s)]+/gi,'$1[redacted]').replace(/Bearer\s+[^\s]+/gi,'Bearer [redacted]').slice(0,1800);}
+ function record(error, context = action){
+  const message = clean(error && error.message || error || 'Unknown error');
+  const fp = context + message;
+  if (fp === lastFingerprint && events.length && Date.now()-Date.parse(events[events.length-1].time)<2000) return;
+  lastFingerprint = fp;
+  events.push({id:'P2-'+Date.now().toString(36),time:new Date().toISOString(),context:clean(context),name:clean(error && error.name || 'Error'),code:clean(error && error.code || ''),message,stack:clean(error && error.stack || ''),online:navigator.onLine});
+  events = events.slice(-50);
+  try {localStorage.setItem(KEY,JSON.stringify(events));} catch {storageNotice='Error history could not be saved. Download it before closing this tab.';}
+  refresh();
+ }
+ window.P2Diagnostics = Object.freeze({record});
+ window.addEventListener('error', e => {
+  if (e.error || e.message) record(e.error || {message:e.message,stack:`${e.filename}:${e.lineno}:${e.colno}`},action);
+  else if(e.target && /SCRIPT|LINK/.test(e.target.tagName)) record(new Error('A '+e.target.tagName.toLowerCase()+' resource could not load'), 'Load resource');
+ },true);
+ window.addEventListener('unhandledrejection',e=>record(e.reason || new Error('Unhandled asynchronous failure'),action));
+ document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if(b && !$('p2Dialog').contains(b)) action=clean((document.querySelector('#sheet.open #shTitle')?.textContent || (document.getElementById('owner')?.hidden===false?'Owner dashboard':'Home'))+' → '+(b.getAttribute('aria-label') || b.textContent).trim().slice(0,80));
+ },true);
+ function report(){return {
+  prototype:'VMR Log — Prototype 2',build:BUILD,generatedAt:new Date().toISOString(),
+  feedback:{task:$('p2Task').value,steps:$('p2Steps').value,expected:$('p2Expected').value,actual:$('p2Actual').value},
+  environment:{page:location.protocol==='file:'?'Local HTML file':location.origin+location.pathname,userAgent:navigator.userAgent,viewport:{width:innerWidth,height:innerHeight},online:navigator.onLine,status:document.getElementById('sync')?.textContent || 'Unavailable',errorHistoryStorage:storageNotice || 'Available'},
+  recentErrors:events
+ };}
+ function serialized(){return JSON.stringify(report(),null,2);}
+ function refresh(){
+  $('p2Count').textContent=events.length;
+  $('p2History').replaceChildren();
+  if(!events.length){const li=document.createElement('li');li.textContent='No automatic errors recorded. You can still report incorrect results.';$('p2History').append(li);}
+  for(const event of [...events].reverse()) {const li=document.createElement('li');li.textContent=`${event.id} · ${event.time} · ${event.context}: ${event.message}`;$('p2History').append(li);}
+  if($('p2Open')) $('p2Open').textContent=events.length?`Report a problem (${events.length} errors)`:'Report a problem';
+  if($('p2Auto')) $('p2Auto').textContent=events.length?'An error was recorded. Open the report to review it.':'';
+  $('p2Preview').value=serialized();
+ }
+ const wrap=document.createElement('section');wrap.className='p2-test';
+ wrap.innerHTML='<p><b>Prototype 2 · Test build</b><br>With the current setup, records stay in this browser. Shared login and data need database setup.</p><button type="button" class="p2-report-btn" id="p2Open">Report a problem</button><p id="p2Auto" role="status" aria-live="polite" style="margin:8px 0 0"></p>';
+ document.querySelector('.tiles').after(wrap);
+ $('p2Open').onclick=()=>{refresh();$('p2Feedback').textContent=storageNotice;$('p2Dialog').showModal();};
+ $('p2Close').onclick=()=>$('p2Dialog').close();
+ for(const id of ['p2Task','p2Steps','p2Expected','p2Actual']) $(id).addEventListener('input',()=>{$('p2Preview').value=serialized();});
+ $('p2Clear').onclick=()=>{if(!confirm('Clear automatic error history? Saved trucking records will stay unchanged.'))return; events=[];lastFingerprint='';try{localStorage.removeItem(KEY);}catch{} refresh();$('p2Feedback').textContent='Automatic error history cleared.';};
+ $('p2Download').onclick=()=>{
+  try{const blob=new Blob([serialized()],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='VMR_P2_Bug_Report_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('p2Feedback').textContent='Report download requested. Send the downloaded JSON file to the project team.';}
+  catch(err){$('p2Feedback').textContent='Download failed. Try Copy report.';record(err,'Download bug report');}
+ };
+ $('p2Copy').onclick=async()=>{
+  try{if(!navigator.clipboard)throw new Error('Clipboard unavailable');await navigator.clipboard.writeText(serialized());$('p2Feedback').textContent='Report copied. Paste it into your message to the project team.';}
+  catch{const preview=$('p2Preview');preview.closest('details').open=true;preview.value=serialized();preview.focus();preview.select();$('p2Feedback').textContent='Automatic copy is unavailable. Copy the selected preview text or download the report.';}
+ };
+ refresh();
+})();
+</script>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+
+/* ======================= SETTINGS =======================
+   FIREBASE_CONFIG: the shared database (from the Firebase console).
+   ORS_KEY: free key from openrouteservice.org for trip miles.
+   Leave ORS_KEY as null and trips just open Google Maps without miles. */
+const FIREBASE_CONFIG = null; // Configure Firebase before testing shared accounts and data.
+const ORS_KEY = null;
+/* ======================================================== */
+
+const TYPES = {
+  diesel:   {label:"Diesel",   icon:"⛽", money:true,  hint:"Odometer + receipt"},
+  repair:   {label:"Repair",   icon:"🔧", money:true,  hint:"Receipt + what was fixed"},
+  delay:    {label:"Delay",    icon:"⏱️", money:false, hint:"Waiting time"},
+  delivery: {label:"Delivery", icon:"📦", money:false, hint:"Load done"},
+  other:    {label:"Other",    icon:"🧾", money:true,  hint:"Parking, tolls, misc"},
+  trip:     {label:"Trip",     icon:"🧭", money:false, hint:"Planned route"}
+};
+const LOG_TYPES = ["diesel","repair","delay","delivery","other"];
+const usd  = new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"});
+const usd0 = new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+const num0 = new Intl.NumberFormat("en-US",{maximumFractionDigits:0});
+const num1 = new Intl.NumberFormat("en-US",{minimumFractionDigits:1,maximumFractionDigits:1});
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const parseNum = v => {
+  const text = String(v ?? "").trim().replace(/^\$\s*/, "");
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text)) return null;
+  const n = Number(text.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+};
+const round = (n, d) => Math.round(n * 10**d) / 10**d;
+const shortName = email => String(email || "").split("@")[0];
+const byName = (a,b) => String(a.name).localeCompare(String(b.name), undefined, {numeric:true});
+const isPhoto = v => typeof v === "string" && v.startsWith("data:");
+const friendly = msg => Object.assign(new Error(msg), {friendly:true});
+
+/* mode: connecting | driver | owner | local (no database) | claude (claude.ai preview) */
+let entries = [], trucks = [], settings = {}, period = "week", ownerPeriod = "week";
+let db = null, fb = null, unsubs = [], mode = "connecting", pending = false, pendingSince = 0, problemMsg = null;
+let wantOwner = false, setupShown = false;
+
+/* ---------- This phone: driver name and truck ---------- */
+const TRUCK_KEY = "vmr-truck", NAME_KEY = "vmr-driver";
+const lsGet = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v || ""); } catch (err) { window.P2Diagnostics.record(err, "Remember driver or truck"); throw friendly("This browser could not remember your name or truck. Check browser storage permissions."); } };
+function driverName(){ return lsGet(NAME_KEY); }
+function myTruckId(){ return lsGet(TRUCK_KEY); }
+function setMyTruck(id){ lsSet(TRUCK_KEY, id); renderTruckBar(); }
+function truckById(id){ return trucks.find(t => t.id === id) || null; }
+function myTruck(){ return truckById(myTruckId()) || (trucks.length === 1 ? trucks[0] : null); }
+function truckLabel(t){ return t ? t.name + (t.model ? ` (${t.model})` : "") : ""; }
+function ownerUnlocked(){ return mode === "owner" || mode === "local" || mode === "claude"; }
+
+/* ---------- Plain-language error messages ---------- */
+function explain(err){
+  const c = String((err && (err.code || err.message)) || "");
+  if (err && err.friendly) return err.message;
+  if (/permission-denied|insufficient permissions/i.test(c)) return "The database blocked this. The Firebase rules may be out of date. (Team: paste the latest firestore.rules and Publish.)";
+  if (/not-found|does not exist/i.test(c)) return "The database isn’t set up yet. (Team: create the Firestore database in Firebase.)";
+  if (/operation-not-allowed|admin-restricted/i.test(c)) return "Drivers can’t connect yet. (Team: turn on Anonymous sign-in in Firebase Authentication.)";
+  if (/resource-exhausted|quota/i.test(c)) return "The database quota was reached. Upload is not confirmed. Check the connection status and database usage before retrying.";
+  if (/unavailable|network|failed to fetch|offline|load failed/i.test(c)) return "Can’t reach the database. Upload is not confirmed. Keep this browser open and check Status before trying again.";
+  if (/unauthenticated/i.test(c)) return "Not connected to the database yet. Close the app and open it again.";
+  return "Something went wrong" + (c ? ` (${c})` : "") + ". Close the app and open it again.";
+}
+function problem(err){
+  window.P2Diagnostics.record(err, "Database or connection");
+  problemMsg = explain(err);
+  $("#alertMsg").textContent = problemMsg; $("#alert").hidden = false;
+  setStatus();
+}
+function clearProblem(){ problemMsg = null; $("#alert").hidden = true; setStatus(); }
+function setStatus(){
+  let t = "Synced", s = "", cls = "";
+  if (mode === "connecting"){ t = "Connecting…"; }
+  else if (problemMsg){ t = "Problem"; s = "Tap for details"; cls = " bad"; }
+  else if (mode === "local"){ t = "This browser"; s = "Not shared"; }
+  else if (!navigator.onLine){ t = "Offline"; s = pending ? "Will upload later" : "Saved on phone"; cls = " warn"; }
+  else if (pending){ t = "Uploading…"; }
+  else s = mode === "owner" ? "Owner" : (driverName() || "Driver");
+  $("#sync").className = "sync" + cls;
+  $("#sync").innerHTML = `<b>${esc(t)}</b>${esc(s)}`;
+}
+// If entries sit un-uploaded for a while with a connection, something (often work or school Wi-Fi) is blocking the database
+setInterval(() => {
+  if (pending && navigator.onLine && pendingSince && Date.now() - pendingSince > 25000 && !problemMsg){
+    problemMsg = "Entries are waiting to upload. Some Wi-Fi networks block the database, so try turning Wi-Fi off and using mobile data.";
+    $("#alertMsg").textContent = problemMsg; $("#alert").hidden = false; setStatus();
+  }
+}, 5000);
+window.addEventListener("online", setStatus);
+window.addEventListener("offline", setStatus);
+
+/* ---------- Storage: Firebase if set up, else claude.ai cloud, else this phone ---------- */
+const LS = {entries:"vmr-log-entries-v1", trucks:"vmr-trucks-v1", settings:"vmr-settings-v1"};
+const local = {
+  read(col){
+    try {
+      const v = JSON.parse(localStorage.getItem(LS[col]) || (col === "settings" ? "{}" : "[]"));
+      const valid = col === "settings" ? v && typeof v === "object" && !Array.isArray(v)
+        : Array.isArray(v) && v.every(x => x && typeof x === "object" && typeof x.id === "string" &&
+          (col !== "entries" || (TYPES[x.type] && Number.isFinite(x.at))));
+      if (!valid) throw new Error("Invalid stored " + col + " format");
+      return v;
+    } catch (err) {
+      window.P2Diagnostics.record(err, "Read " + col);
+      throw friendly("Could not read saved " + col + ". Existing data was left untouched. Open Report a problem; do not clear browser data.");
+    }
+  },
+  write(col, v){ try { localStorage.setItem(LS[col], JSON.stringify(v)); return true; } catch (err) { window.P2Diagnostics.record(err, "Write " + col); return false; } }
+};
+function startLocal(){
+  db = null; fb = null; mode = "local";
+  entries = local.read("entries"); trucks = local.read("trucks"); settings = local.read("settings");
+  setStatus(); render();
+}
+async function connect(){
+  if (FIREBASE_CONFIG) return connectFirebase();
+  try {
+    const c = window.claude;
+    if (!c || typeof c.use !== "function") return startLocal();
+    const d = await c.use("db");
+    if (!d) return startLocal();
+    db = d; mode = "claude"; setStatus();
+    db.collection("entries").orderBy("at","desc").limit(500).onSnapshot(snap => { entries = snap.docs.map(s => ({...s.data(), id:s.id})); render(); }, problem);
+    db.collection("trucks").onSnapshot(snap => { trucks = snap.docs.map(s => ({...s.data(), id:s.id})); render(); }, problem);
+    db.collection("settings").onSnapshot(snap => { const d0 = snap.docs.find(x => x.id === "owner"); settings = d0 ? d0.data() : {}; render(); }, problem);
+  } catch (err) { problem(err); startLocal(); }
+}
+
+async function connectFirebase(){
+  let appMod, authMod, fs;
+  try {
+    const base = "https://www.gstatic.com/firebasejs/10.12.2/";
+    [appMod, authMod, fs] = await Promise.all([
+      import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")
+    ]);
+  } catch {
+    mode = "connecting";
+    problem(friendly("Can’t load the app’s database connection. Check your signal, then tap Try again."));
+    return;
+  }
+  const app = appMod.initializeApp(FIREBASE_CONFIG);
+  let store;
+  try { store = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache() }); }
+  catch { store = fs.getFirestore(app); }
+  const auth = authMod.getAuth(app);
+  fb = { fs, store, auth, authMod, user: null };
+  const col = name => fs.collection(store, name);
+
+  authMod.onAuthStateChanged(auth, async user => {
+    unsubs.forEach(u => u()); unsubs = [];
+    fb.user = user;
+    if (!user){
+      // Drivers never see a sign-in screen: each phone gets its own private ID automatically
+      mode = "connecting"; setStatus();
+      try { await authMod.signInAnonymously(auth); } catch (err) { problem(err); }
+      return;
+    }
+    mode = user.isAnonymous ? "driver" : "owner";
+    if (!problemMsg || /connect|database/i.test(problemMsg)) clearProblem();
+    const onErr = err => {
+      if (mode === "owner" && err && err.code === "permission-denied"){
+        toast("That email isn’t on the owner guest list.");
+        wantOwner = false; authMod.signOut(auth);
+        return;
+      }
+      problem(err);
+    };
+    const q = mode === "owner"
+      ? fs.query(col("entries"), fs.where("at", ">=", Date.now() - 62*864e5), fs.orderBy("at", "desc"))
+      : fs.query(col("entries"), fs.where("uid", "==", user.uid), fs.limit(300));
+    unsubs.push(fs.onSnapshot(q, {includeMetadataChanges:true}, snap => {
+      const was = pending; pending = snap.metadata.hasPendingWrites;
+      if (pending && !was) pendingSince = Date.now();
+      if (!pending){ pendingSince = 0; if (problemMsg && /waiting to upload|reach the database/.test(problemMsg)) clearProblem(); }
+      entries = snap.docs.map(d => ({...d.data(), id:d.id}));
+      setStatus(); render();
+    }, onErr));
+    unsubs.push(fs.onSnapshot(col("trucks"), snap => { trucks = snap.docs.map(d => ({...d.data(), id:d.id})); render(); }, onErr));
+    if (mode === "owner"){
+      unsubs.push(fs.onSnapshot(fs.doc(store, "settings", "owner"), snap => { settings = snap.exists() ? snap.data() : {}; render(); }, onErr));
+      if (wantOwner){ wantOwner = false; closeSheet(); showOwner(); }
+    } else {
+      settings = {};
+      hideOwner();
+    }
+    setStatus(); render();
+  });
+}
+
+async function confirmWrite(operation){
+  let timer;
+  try {
+    return await Promise.race([operation, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(friendly("The database has not confirmed this change. It may still upload. Check Status and existing records before retrying to avoid duplicates.")), 12000);
+    })]);
+  } finally { clearTimeout(timer); }
+}
+function stamp(obj){
+  const o = {...obj, driver: driverName() || null};
+  if (fb && fb.user){ o.uid = fb.user.uid; if (fb.user.email) o.by = fb.user.email; }
+  return o;
+}
+async function saveDoc(colName, obj, keepAuthor){
+  const data = colName === "entries" && !keepAuthor ? stamp(obj) : obj;
+  if (fb){
+    if (!fb.user) throw friendly("Still connecting to the database. Wait a few seconds, then tap Save again.");
+    const operation = fb.fs.setDoc(fb.fs.doc(fb.store, colName, obj.id), data);
+    if (!navigator.onLine){ operation.catch(problem); return "queued"; }
+    await confirmWrite(operation);
+    return "confirmed";
+  }
+  if (mode === "connecting") throw friendly("Still connecting. Wait a few seconds, then tap Save again.");
+  if (db){ await db.collection(colName).doc(obj.id).set(data); return; }
+  const list = local.read(colName).filter(x => x.id !== obj.id); list.push(data);
+  if (!local.write(colName, list)) throw friendly("This phone’s storage is full. Delete a few old entries with photos, then save again.");
+  if (colName === "entries") entries = list; else trucks = list;
+  render();
+}
+async function removeDoc(colName, id){
+  if (fb){
+    if (!navigator.onLine) throw friendly("Connect to the internet before deleting a shared record.");
+    await confirmWrite(fb.fs.deleteDoc(fb.fs.doc(fb.store, colName, id))); return;
+  }
+  if (db){ await db.collection(colName).doc(id).delete(); return; }
+  const list = local.read(colName).filter(x => x.id !== id);
+  if (!local.write(colName, list)) throw friendly("Could not delete the record from browser storage. It has not been removed.");
+  if (colName === "entries") entries = list; else trucks = list;
+  render();
+}
+async function saveSettings(patch){
+  const updated = {...settings, ...patch};
+  if (fb){
+    if (!navigator.onLine) throw friendly("Connect to the internet before changing shared pay settings.");
+    await confirmWrite(fb.fs.setDoc(fb.fs.doc(fb.store, "settings", "owner"), patch, {merge:true}));
+    settings = updated; render(); return;
+  }
+  if (db){ await db.collection("settings").doc("owner").set(updated); return; }
+  if (!local.write("settings", updated)) throw friendly("Could not save pay settings in browser storage. Previous settings are unchanged.");
+  settings = updated; render();
+}
+
+/* ---------- Periods ---------- */
+function dayStart(t = Date.now()){ const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); }
+function weekStart(){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return d.getTime(); }
+function monthStart(){ const d = new Date(); d.setHours(0,0,0,0); d.setDate(1); return d.getTime(); }
+function periodStart(){ return period === "day" ? dayStart() : weekStart(); }
+function inPeriod(e){ return e.at >= periodStart(); }
+function fmtMins(m){ m = Math.round(m); const h = Math.floor(m/60), r = m%60; return h ? (r ? `${h} h ${r} min` : `${h} h`) : `${r} min`; }
+function fmtTime(t){ return new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); }
+function fmtDay(t){
+  const d0 = dayStart(t), today = dayStart();
+  if (d0 === today) return "Today";
+  if (d0 === today - 864e5) return "Yesterday";
+  return new Date(t).toLocaleDateString([], {weekday:"long", month:"short", day:"numeric"});
+}
+
+/* ---------- Fuel and miles math ---------- */
+function readings(truckId){
+  return entries.filter(e => e.type === "diesel" && e.truckId === truckId && Number(e.odo) > 0).sort((a,b) => a.at - b.at);
+}
+// Highest odometer reading known for a truck (saved on the truck, so every phone can check against it)
+function lastOdoFor(truckId){
+  const t = truckById(truckId), r = readings(truckId);
+  return Math.max(Number(t && t.lastOdo) || 0, r.length ? Number(r[r.length-1].odo) : 0) || null;
+}
+// Miles and mpg for one fill-up
+function tankStats(e){
+  if (Number(e.segMiles) > 0) return {miles: Number(e.segMiles), mpg: Number(e.mpg) || (Number(e.gallons) > 0 ? e.segMiles / e.gallons : null)};
+  const r = readings(e.truckId).filter(x => x.at < e.at && x.id !== e.id);
+  const p = r.length ? r[r.length-1] : null; if (!p) return null;
+  const miles = Number(e.odo) - Number(p.odo); if (!(miles > 0)) return null;
+  return { miles, mpg: Number(e.gallons) > 0 ? miles / Number(e.gallons) : null };
+}
+// Driven (odometer) vs planned (trips) miles, mpg and diesel cost per mile since `from`
+function truckStats(truckId, from){
+  let driven = 0, segGal = 0, gal = 0, cost = 0;
+  entries.filter(e => e.type === "diesel" && e.truckId === truckId && e.at >= from).forEach(e => {
+    const ts = tankStats(e);
+    if (ts && ts.miles < 3000){
+      driven += ts.miles;
+      if (Number(e.gallons) > 0){ segGal += ts.miles; gal += Number(e.gallons); cost += Number(e.amount) || 0; }
+    }
+  });
+  const planned = entries.filter(e => e.type === "trip" && e.truckId === truckId && e.at >= from)
+    .reduce((s, e) => s + (Number(e.plannedMiles) || 0), 0);
+  return { driven, planned, segGal, segCost: cost, mpg: gal ? segGal/gal : null, costPerMile: segGal ? cost/segGal : null };
+}
+function truckMpg(t){ if (!t) return null; const s = truckStats(t.id, 0); return s.mpg || Number(t.mpgEst) || null; }
+function lastPpg(){
+  const d = entries.filter(e => e.type === "diesel" && Number(e.ppg) > 0).sort((a,b) => b.at - a.at)[0];
+  return d ? Number(d.ppg) : null;
+}
+
+/* ---------- Driver home screen ---------- */
+function renderTruckBar(){
+  const t = myTruck(), name = driverName();
+  $("#truckName").textContent = t ? truckLabel(t) : (trucks.length ? "Choose your truck" : "Add your truck");
+  $("#truckWho").textContent = name ? `Your truck, ${name}` : "Your truck";
+}
+function render(){
+  renderTruckBar();
+  $("#tOwner").innerHTML = `<span class="ic">${ownerUnlocked() ? "📊" : "🔒"}</span>Owner dashboard`;
+  $("#pDay").setAttribute("aria-pressed", period === "day");
+  $("#pWeek").setAttribute("aria-pressed", period === "week");
+  const list = entries.filter(inPeriod).sort((a,b) => b.at - a.at);
+  const sums = {diesel:0, repair:0, other:0}; let total = 0, deliveries = 0, delayMins = 0;
+  for (const e of list){
+    if (TYPES[e.type]?.money && !e.personal){ const a = Number(e.amount)||0; total += a; sums[e.type] = (sums[e.type]||0) + a; }
+    if (e.type === "delivery") deliveries++;
+    if (e.type === "delay") delayMins += Number(e.mins)||0;
+  }
+  $("#total").textContent = usd.format(total);
+  $("#breakdown").textContent = ["diesel","repair","other"].filter(k => sums[k]).map(k => `${TYPES[k].label} ${usd0.format(sums[k])}`).join(", ") || "Nothing logged yet";
+  $("#deliv").textContent = deliveries;
+  $("#delayTotal").textContent = delayMins ? `${fmtMins(delayMins)} waiting` : "No delays logged";
+  $("#listTitle").textContent = mode === "owner" ? (period === "day" ? "Today, everyone" : "This week, everyone") : (period === "day" ? "Today" : "This week");
+
+  const box = $("#list");
+  if (!list.length){ box.innerHTML = `<div class="empty">Nothing logged ${period === "day" ? "today" : "this week"}. Tap Log after your next fuel stop or delivery.</div>`; }
+  else {
+    let html = "", lastDay = null;
+    for (const e of list){
+      const d = dayStart(e.at);
+      if (period === "week" && d !== lastDay){ if (lastDay !== null) html += "</ul>"; html += `<div class="day">${esc(fmtDay(e.at))}</div><ul class="list">`; lastDay = d; }
+      else if (lastDay === null){ html += `<ul class="list">`; lastDay = d; }
+      html += `<li>${rowHtml(e)}</li>`;
+    }
+    box.innerHTML = html + "</ul>";
+  }
+  renderOwner();
+  if (!setupShown && mode !== "connecting" && mode !== "owner" && !driverName() && !$("#sheet").classList.contains("open")){ setupShown = true; openTrucks(null, true); }
+}
+function rowHtml(e){
+  const T = TYPES[e.type] || TYPES.other;
+  let right = "";
+  const parts = [fmtTime(e.at)];
+  if (T.money) right = `<span class="amt">${usd.format(Number(e.amount)||0)}</span>`;
+  if (e.type === "delay") right = `<span class="amt">${fmtMins(e.mins||0)}</span>`;
+  if (e.type === "trip") right = `<span class="amt">${num0.format(e.plannedMiles||0)} mi</span>`;
+  if (e.truckName) parts.push(e.truckName);
+  if (e.type === "diesel"){ const ts = tankStats(e); if (ts) parts.push(`${num0.format(ts.miles)} mi since last fill`); }
+  if (e.type === "trip" && e.toLabel) parts.push("to " + e.toLabel);
+  const who = e.driver || shortName(e.by);
+  if (who && mode === "owner") parts.push(who);
+  const desc = e.type === "trip" ? "" : (e.location || e.note || "");
+  if (desc) parts.push(desc);
+  let badge = "";
+  if (e.review) badge = `<span class="badge">Needs owner review</span>`;
+  else if (e.personal) badge = `<span class="badge">Personal</span>`;
+  const title = T.label + (e.type === "delivery" && e.load ? " " + e.load : "");
+  return `<button class="row" data-id="${esc(e.id)}"><span class="ic">${T.icon}</span><span class="mid"><span class="ttl">${esc(title)}</span>${badge}<div class="meta">${esc(parts.join(", "))}</div></span>${right}</button>`;
+}
+
+/* ---------- Owner dashboard (locked) ---------- */
+function showOwner(){ $("#owner").hidden = false; document.body.classList.add("noscroll"); renderOwner(); $("#owner").scrollTop = 0; }
+function hideOwner(){ $("#owner").hidden = true; document.body.classList.remove("noscroll"); }
+function openOwner(){
+  if (ownerUnlocked()) return showOwner();
+  if (!fb){ toast("Still connecting. Try again in a few seconds."); return; }
+  openSheet("Owner dashboard", `
+    <p class="lsub">The dashboard shows money for the whole business, so it’s locked. Sign in with an owner or team email.</p>
+    <form id="oForm">
+      <label class="f"><span>Email</span><input class="in" id="oEmail" type="email" autocomplete="username" required></label>
+      <label class="f"><span>Password</span><input class="in" id="oPass" type="password" autocomplete="current-password" required></label>
+      <div class="formerr" id="oErr" hidden></div>
+      <button class="save" id="oBtn" type="submit">🔒 Unlock</button>
+    </form>`);
+  setTimeout(() => $("#oEmail") && $("#oEmail").focus(), 250);
+  $("#oForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const btn = $("#oBtn"), errBox = $("#oErr");
+    btn.disabled = true; btn.textContent = "Unlocking…"; errBox.hidden = true;
+    try {
+      wantOwner = true;
+      await fb.authMod.signInWithEmailAndPassword(fb.auth, $("#oEmail").value.trim(), $("#oPass").value);
+    } catch (err) {
+      window.P2Diagnostics.record({name:"SignInError", code:err && err.code, message:"Owner sign-in failed"}, "Owner sign-in");
+      wantOwner = false;
+      const c = err && err.code || "";
+      errBox.textContent =
+        /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c) ? "That email or password is wrong. Check both and try again." :
+        /too-many-requests/.test(c) ? "Too many tries. Wait a few minutes, then try again." :
+        /network/.test(c) ? "No connection right now. Unlock once you have signal." :
+        /operation-not-allowed/.test(c) ? "Email sign-in isn’t switched on. (Team: turn on Email/Password in Firebase Authentication.)" :
+        explain(err);
+      errBox.hidden = false;
+      btn.disabled = false; btn.textContent = "🔒 Unlock";
+    }
+  });
+}
+function lockOwner(){
+  hideOwner();
+  if (fb && mode === "owner"){ fb.authMod.signOut(fb.auth); toast("Owner dashboard locked"); }
+}
+function renderOwner(){
+  if ($("#owner").hidden) return;
+  $("#opWeek").setAttribute("aria-pressed", ownerPeriod === "week");
+  $("#opMonth").setAttribute("aria-pressed", ownerPeriod === "month");
+  $("#oLock").hidden = mode !== "owner";
+  const from = ownerPeriod === "week" ? weekStart() : monthStart();
+  const now = new Date(), totalDays = ownerPeriod === "week" ? 7 : new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const elapsedDays = Math.max(1, (Date.now() - from) / 864e5);
+  const list = entries.filter(e => e.at >= from);
+  const cats = {diesel:0, repair:0, other:0}; let expenses = 0, deliveries = 0, delayMins = 0, delays = 0;
+  const people = {};
+  for (const e of list){
+    const who = e.driver || shortName(e.by) || "Unnamed";
+    people[who] = people[who] || {entries:0, spent:0, deliveries:0};
+    people[who].entries++;
+    if (TYPES[e.type]?.money && !e.personal){ const a = Number(e.amount)||0; expenses += a; cats[e.type] += a; people[who].spent += a; }
+    if (e.type === "delivery"){ deliveries++; people[who].deliveries++; }
+    if (e.type === "delay"){ delays++; delayMins += Number(e.mins)||0; }
+  }
+  const ppl = Number(settings.payPerLoad) || 0;
+  const revenue = deliveries * ppl, profit = revenue - expenses;
+  const pace = ppl && elapsedDays < totalDays ? revenue / elapsedDays * totalDays : null;
+  const truckRows = trucks.slice().sort(byName).map(t => ({t, s: truckStats(t.id, from)}));
+  const driven = truckRows.reduce((a, r) => a + r.s.driven, 0);
+  const planned = truckRows.reduce((a, r) => a + r.s.planned, 0);
+  // Per-mile costs only count fill-ups that have miles before them, so the first fill-up doesn’t skew the numbers
+  const segMiles = truckRows.reduce((a, r) => a + r.s.segGal, 0), segCost = truckRows.reduce((a, r) => a + r.s.segCost, 0);
+  const otherCosts = cats.repair + cats.other;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const review = list.filter(e => e.review).sort((a,b) => b.at - a.at);
+  const maxCat = Math.max(1, ...Object.values(cats));
+  const label = ownerPeriod === "week" ? "this week" : "this month";
+
+  let h = (mode === "claude" ? `<div class="hint" style="margin-top:12px">Preview: in the real app this dashboard is locked and asks for an owner sign-in.</div>` : "") + `<div class="ocards">
+    <div class="ocard"><div class="k">Projected revenue</div><div class="v">${ppl ? usd0.format(revenue) : "–"}</div>
+      <div class="sub">${ppl ? `${plural(deliveries, "load")} × ${usd0.format(ppl)}${pace ? `. On pace for ${usd0.format(pace)}` : ""}` : `<button class="linkbtn" id="oSetPay">Set pay per load</button>`}</div></div>
+    <div class="ocard"><div class="k">Expenses</div><div class="v">${usd0.format(expenses)}</div><div class="sub">${label}</div></div>
+    <div class="ocard wide"><div class="k">Estimated profit</div><div class="v${profit < 0 ? " neg" : ""}">${ppl ? usd0.format(profit) : "–"}</div>
+      <div class="sub">${ppl ? "Revenue minus logged expenses" : "Set pay per load to see profit"}</div></div>
+  </div>
+
+  <h2>Cost per mile</h2>
+  <div class="ocards">
+    <div class="ocard"><div class="k">All costs per mile</div><div class="v">${segMiles ? usd.format((segCost + otherCosts) / segMiles) : "–"}</div><div class="sub">${driven ? `${num0.format(driven)} miles driven` : "Needs fill-ups with odometer readings"}</div></div>
+    <div class="ocard"><div class="k">Diesel per mile</div><div class="v">${segMiles ? usd.format(segCost / segMiles) : "–"}</div><div class="sub">${planned ? `${num0.format(planned)} miles planned` : "No trips planned yet"}</div></div>
+  </div>
+
+  <h2>Miles and fuel by truck</h2>`;
+  h += truckRows.length ? truckRows.map(({t, s}) => {
+    const extra = s.driven && s.planned ? s.driven - s.planned : null;
+    const pct = extra !== null ? Math.round(Math.abs(extra) / s.planned * 100) : null;
+    const facts = [s.mpg ? `${num1.format(s.mpg)} mpg` : null, s.costPerMile ? `${usd.format(s.costPerMile)} diesel per mile` : null].filter(Boolean);
+    let foot = facts.length ? facts.join(", ") + "." : "Fuel math starts after 2 fill-ups with odometer readings.";
+    if (pct !== null && extra !== 0) foot += ` Driven miles are ${pct}% ${extra > 0 ? "over" : "under"} plan.`;
+    return `<div class="tcard"><h4>${esc(t.name)} <span>${esc(t.model || "")}</span></h4>
+      <div class="trio">
+        <div><div class="k">Driven</div><div class="v">${s.driven ? num0.format(s.driven) : "–"}</div></div>
+        <div><div class="k">Planned</div><div class="v">${s.planned ? num0.format(s.planned) : "–"}</div></div>
+        <div><div class="k">Extra</div><div class="v${extra > 0 ? " up" : ""}">${extra === null ? "–" : (extra > 0 ? "+" : "") + num0.format(extra)}</div></div>
+      </div><div class="tfoot">${esc(foot)}</div></div>`;
+  }).join("") : `<div class="empty">No trucks added yet.</div>`;
+
+  h += `<h2>Expenses by type</h2><div class="tcard">${["diesel","repair","other"].map(k => `
+    <div class="barrow"><span>${TYPES[k].icon} ${TYPES[k].label}</span><b>${usd0.format(cats[k])}</b></div>
+    <div class="bar"><i style="width:${Math.round(cats[k] / maxCat * 100)}%"></i></div>`).join("")}</div>
+
+  <h2>Deliveries and delays</h2>
+  <div class="ocards">
+    <div class="ocard"><div class="k">Deliveries</div><div class="v">${deliveries}</div><div class="sub">${label}</div></div>
+    <div class="ocard"><div class="k">Time waiting</div><div class="v">${delayMins ? fmtMins(delayMins) : "–"}</div><div class="sub">${delays ? `${plural(delays, "delay")}, about ${fmtMins(delayMins / delays)} each` : "No delays logged"}</div></div>
+  </div>
+
+  <h2>Needs review${review.length ? ` (${review.length})` : ""}</h2>
+  ${review.length ? `<ul class="list">${review.map(e => `<li>${rowHtml(e)}</li>`).join("")}</ul>` : `<div class="empty">Nothing to review. Every expense has a receipt.</div>`}
+
+  <h2>By driver</h2>
+  ${Object.keys(people).length ? `<div class="tcard">${Object.entries(people).sort((a,b) => b[1].spent - a[1].spent).map(([who, p]) =>
+    `<div class="barrow"><span>${esc(who)}</span><b>${usd0.format(p.spent)}</b></div><div class="note" style="margin:0 0 8px">${p.entries === 1 ? "1 entry" : p.entries + " entries"}, ${p.deliveries === 1 ? "1 delivery" : p.deliveries + " deliveries"}</div>`).join("")}</div>` : `<div class="empty">No entries ${label}.</div>`}
+
+  <h2>Settings</h2>
+  <div class="tcard"><div class="barrow"><span>Pay per load</span><b>${ppl ? usd0.format(ppl) : "Not set"}</b></div>
+    <button class="ghost" id="oEditPay">${ppl ? "Change pay per load" : "Set pay per load"}</button>
+    <p class="note">Used for projected revenue. Each delivery logged counts as one load.</p></div>`;
+  $("#oBody").innerHTML = h;
+  $("#oBody").querySelectorAll(".row").forEach(r => r.onclick = () => openDetail(r.dataset.id));
+  [$("#oSetPay"), $("#oEditPay")].forEach(b => b && (b.onclick = openPayEdit));
+}
+function openPayEdit(){
+  openSheet("Pay per load", `
+    <label class="f"><span>Average pay per load</span><div class="money"><input class="in" id="pAmt" inputmode="decimal" placeholder="0" value="${esc(settings.payPerLoad || "")}"></div></label>
+    <div class="formerr" id="pErr" hidden></div>
+    <button class="save" id="pSave">Save</button>`);
+  $("#pSave").onclick = async () => {
+    const v = parseNum($("#pAmt").value);
+    if (!(v > 0)){ $("#pErr").textContent = "Type the average amount VMR gets paid for one load."; $("#pErr").hidden = false; $("#pAmt").classList.add("invalid"); return; }
+    try { await saveSettings({payPerLoad: round(v, 2)}); closeSheet(); toast("Pay per load saved"); }
+    catch (err) { window.P2Diagnostics.record(err, "Save pay settings"); $("#pErr").textContent = explain(err); $("#pErr").hidden = false; }
+  };
+}
+
+/* ---------- Sheet, toast, status ---------- */
+function openSheet(title, html){
+  $("#shTitle").textContent = title; $("#shBody").innerHTML = html;
+  $("#scrim").classList.add("open"); $("#sheet").classList.add("open");
+  $("#sheet").scrollTop = 0;
+}
+function closeSheet(){ $("#scrim").classList.remove("open"); $("#sheet").classList.remove("open"); }
+$("#scrim").onclick = closeSheet; $("#shClose").onclick = closeSheet;
+let toastT;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3500); }
+function openStatus(){
+  const rows = [
+    ["Connection", mode === "local" ? "Not using the shared database" : navigator.onLine ? "Online" : "Offline"],
+    ["Uploads", mode === "local" ? "Local only — no shared uploads" : problemMsg ? "Not confirmed — check the error above" : pending ? "Some entries are waiting to upload" : "No pending uploads reported"],
+    ["This phone", mode === "owner" ? `Owner (${fb && fb.user && fb.user.email})` : `Driver${driverName() ? ", " + driverName() : ""}`]
+  ];
+  openSheet("Status", `${problemMsg ? `<div class="formerr">${esc(problemMsg)}</div>` : ""}
+    <div class="detail"><dl>${rows.map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl></div>
+    <button class="ghost" id="stRetry">Reconnect</button>
+    ${mode === "owner" ? `<button class="del" id="stLock">🔒 Lock owner dashboard</button>` : ""}`);
+  $("#stRetry").onclick = () => location.reload();
+  if ($("#stLock")) $("#stLock").onclick = () => { closeSheet(); lockOwner(); };
+}
+
+/* ---------- Form errors: show what’s missing, in plain words ---------- */
+function showNeeds(needs){
+  const body = $("#shBody");
+  body.querySelectorAll(".invalid").forEach(n => n.classList.remove("invalid"));
+  needs.forEach(n => { const el = n.sel && body.querySelector(n.sel); if (el) el.classList.add("invalid"); });
+  const box = $("#formErr"); if (!box) return;
+  if (!needs.length){ box.hidden = true; return; }
+  box.innerHTML = `<b>Can’t save yet. Please add:</b><ul>${needs.map(n => `<li>${esc(n.msg)}</li>`).join("")}</ul>`;
+  box.hidden = false;
+}
+function failSave(btn, label, err){
+  window.P2Diagnostics.record(err, "Save " + label);
+  btn.disabled = false; btn.textContent = `Save ${label.toLowerCase()}`;
+  const box = $("#formErr");
+  const msg = explain(err);
+  if (box){ box.innerHTML = `<b>Couldn’t save.</b> ${esc(msg)}`; box.hidden = false; box.scrollIntoView({block:"center", behavior:"smooth"}); }
+  else toast(msg);
+}
+
+/* ---------- Shared form pieces ---------- */
+function photoSlot(key, label){
+  return `<label class="ph" data-key="${key}"><span class="ic">📷</span>${label}<input type="file" accept="image/*" aria-label="${label}"></label>`;
+}
+function wirePhotos(f, onChange){
+  $("#shBody").querySelectorAll(".ph").forEach(slot => {
+    const input = slot.querySelector("input");
+    input.onchange = async () => {
+      const file = input.files && input.files[0]; if (!file) return;
+      try {
+        const url = await compress(file);
+        f.photos[slot.dataset.key] = url;
+        slot.classList.add("has"); slot.classList.remove("invalid");
+        slot.querySelectorAll("img,.re").forEach(n => n.remove());
+        slot.insertAdjacentHTML("afterbegin", `<img alt=""><span class="re">Retake</span>`);
+        slot.querySelector("img").src = url;
+        onChange();
+      } catch (err) { window.P2Diagnostics.record(err || new Error("Image could not be decoded"), "Read photo"); toast("That photo couldn’t be read. Try a JPEG or PNG photo."); }
+    };
+  });
+}
+function truckSelectHtml(){
+  if (!trucks.length) return `<div class="hint">Add your truck first so miles and fuel can be worked out.</div><button class="ghost" id="fAddTruck" type="button" style="margin:-4px 0 14px">Add a truck</button>`;
+  const cur = myTruck();
+  return `<label class="f"><span>Truck</span><select class="in" id="fTruck"><option value="">Choose a truck</option>${
+    trucks.slice().sort(byName).map(t => `<option value="${esc(t.id)}"${cur && cur.id === t.id ? " selected" : ""}>${esc(truckLabel(t))}</option>`).join("")
+  }</select></label>`;
+}
+function wireAddTruck(reopen){ const b = $("#fAddTruck"); if (b) b.onclick = () => openTrucks(reopen); }
+async function finishSave(e, btn, label){
+  try {
+    const result = await saveDoc("entries", e);
+    closeSheet();
+    if (period === "day" && !inPeriod(e)) period = "week";
+    render();
+    const box = TYPES[e.type].money ? $("#totalBox") : e.type === "delivery" ? $("#deliv").closest(".stat") : null;
+    if (box){ box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash"); }
+    toast(result === "queued" ? `${label} queued in this browser; upload not confirmed` : `${label} saved`);
+    return true;
+  } catch (err) { failSave(btn, label, err); return false; }
+}
+
+/* ---------- Log picker ---------- */
+function openPicker(){
+  openSheet("What are you logging?", `<div class="cats">${
+    LOG_TYPES.map(k => { const T = TYPES[k]; return `<button class="cat${k === "other" ? " wide" : ""}" data-type="${k}"><span class="ic">${T.icon}</span><b>${T.label}</b><span>${T.hint}</span></button>`; }).join("")
+  }</div>`);
+  $("#shBody").querySelectorAll(".cat").forEach(b => b.onclick = () => b.dataset.type === "diesel" ? openDiesel() : openForm(b.dataset.type));
+}
+
+/* ---------- Diesel: odometer + receipt, with automatic checks ---------- */
+function openDiesel(){
+  const f = {photos:{}}; let tried = false;
+  openSheet("Diesel", `<div class="formerr" id="formErr" hidden></div>` + truckSelectHtml() + `
+    <div class="photos">${photoSlot("odoPhoto","Odometer photo")}${photoSlot("receipt","Receipt photo")}</div>
+    <label class="f"><span>Odometer reading</span><input class="in" id="fOdo" inputmode="numeric" autocomplete="off" placeholder="Number on the odometer photo"></label>
+    <label class="f"><span>Total paid</span><div class="money"><input class="in" id="fAmt" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></label>
+    <label class="f"><span>Gallons</span><input class="in" id="fGal" inputmode="decimal" autocomplete="off" placeholder="From the receipt"></label>
+    <div id="calc"></div>
+    <label class="check"><input type="checkbox" id="fNoRcpt"> I don’t have the receipt</label>
+    <label class="f"><span id="noteLbl">Note <em>(optional)</em></span><input class="in" id="fNote" placeholder="Station or anything useful"></label>
+    <button class="save" id="fSave">Save diesel</button>`);
+  wireAddTruck(openDiesel);
+  wirePhotos(f, check);
+  $("#shBody").querySelectorAll("input:not([type=file]),select").forEach(i => { i.addEventListener("input", check); i.addEventListener("change", check); });
+
+  function vals(){
+    return {
+      truckId: $("#fTruck") ? $("#fTruck").value : "",
+      odo: parseNum($("#fOdo").value), amount: parseNum($("#fAmt").value), gallons: parseNum($("#fGal").value),
+      noRcpt: $("#fNoRcpt").checked, note: $("#fNote").value.trim()
+    };
+  }
+  function check(){
+    const v = vals(), needs = [], warns = [];
+    let calc = "";
+    if (!v.truckId) needs.push({msg:"Which truck you’re driving", sel: trucks.length ? "#fTruck" : "#fAddTruck"});
+    if (!f.photos.odoPhoto) needs.push({msg:"A photo of the odometer", sel:'.ph[data-key="odoPhoto"]'});
+    if (!(v.odo > 0) || !Number.isSafeInteger(v.odo)) needs.push({msg:"A positive whole odometer number", sel:"#fOdo"});
+    if (!f.photos.receipt && !v.noRcpt) needs.push({msg:"A photo of the receipt (or tick “I don’t have the receipt”)", sel:'.ph[data-key="receipt"]'});
+    if (!(v.amount > 0)) needs.push({msg:"The total paid", sel:"#fAmt"});
+    if (!(v.gallons > 0)) needs.push({msg:"How many gallons", sel:"#fGal"});
+    if (v.noRcpt && !f.photos.receipt && !v.note) needs.push({msg:"A note saying what happened to the receipt", sel:"#fNote"});
+    const prevOdo = v.truckId ? lastOdoFor(v.truckId) : null;
+    if (v.odo > 0 && prevOdo){
+      const miles = v.odo - prevOdo;
+      if (miles <= 0){
+        needs.push({msg:`An odometer number higher than this truck’s last one (${num0.format(prevOdo)})`, sel:"#fOdo"});
+        calc += `<div class="warn">That’s lower than this truck’s last reading (${num0.format(prevOdo)}). Check the number on the photo.</div>`;
+      } else {
+        calc += `<div><b>${num0.format(miles)}</b> miles since the last fill-up</div>`;
+        if (miles > 1500) warns.push("That’s a lot of miles since the last fill-up. Check the odometer number.");
+        if (v.gallons > 0){
+          const mpg = miles / v.gallons;
+          calc += `<div><b>${num1.format(mpg)}</b> miles per gallon this tank</div>`;
+          if (mpg < 3 || mpg > 12) warns.push("Miles per gallon looks unusual. Check the odometer number and gallons.");
+        }
+      }
+    } else if (v.odo > 0 && v.truckId){
+      calc += `<div>First reading for this truck. Miles start counting from the next fill-up.</div>`;
+    }
+    if (v.amount > 0 && v.gallons > 0){
+      const ppg = v.amount / v.gallons;
+      calc += `<div><b>${usd.format(ppg)}</b> per gallon</div>`;
+      if (ppg < 2.5 || ppg > 9) warns.push("Price per gallon looks unusual. Check the total and gallons on the receipt.");
+    }
+    calc += warns.map(w => `<div class="warn">${esc(w)}</div>`).join("");
+    $("#calc").innerHTML = calc ? `<div class="calc">${calc}</div>` : "";
+    $("#noteLbl").innerHTML = v.noRcpt && !f.photos.receipt ? "What happened to the receipt?" : "Note <em>(optional)</em>";
+    if (tried) showNeeds(needs);
+    return {v, needs, prevOdo};
+  }
+  check();
+
+  $("#fSave").onclick = async () => {
+    tried = true;
+    const {v, needs, prevOdo} = check();
+    if (needs.length){ $("#formErr").scrollIntoView({block:"start", behavior:"smooth"}); return; }
+    const t = truckById(v.truckId), btn = $("#fSave");
+    btn.disabled = true; btn.textContent = "Saving…";
+    const seg = prevOdo && v.odo > prevOdo ? v.odo - prevOdo : null;
+    setMyTruck(v.truckId);
+    const ok = await finishSave({
+      id: uid(), type: "diesel", at: Date.now(), createdAt: Date.now(),
+      truckId: v.truckId, truckName: t ? t.name : null,
+      odo: Math.round(v.odo), prevOdo: prevOdo || null, segMiles: seg ? Math.round(seg) : null, mpg: seg ? round(seg / v.gallons, 2) : null,
+      amount: round(v.amount, 2), gallons: round(v.gallons, 3), ppg: round(v.amount / v.gallons, 3),
+      receipt: f.photos.receipt || null, odoPhoto: f.photos.odoPhoto || null,
+      note: v.note || null, personal: false, review: !f.photos.receipt
+    }, btn, "Diesel");
+    // Remember the truck’s latest odometer so every phone can check the next fill-up against it
+    if (ok && t && Math.round(v.odo) > (Number(t.lastOdo) || 0)){
+      saveDoc("trucks", {...t, lastOdo: Math.round(v.odo), lastOdoAt: Date.now()}).catch(problem);
+    }
+  };
+}
+
+/* ---------- Repair, delay, delivery, other ---------- */
+function hhmm(t){ return new Date(t).toTimeString().slice(0,5); }
+function openForm(type){
+  const T = TYPES[type]; const f = {photos:{}}; let tried = false;
+  let body = `<div class="formerr" id="formErr" hidden></div>`;
+  if (T.money) body += `<label class="f"><span>Amount</span><div class="money"><input class="in" id="fAmt" inputmode="decimal" autocomplete="off" placeholder="0.00"></div></label>`;
+  if (type === "repair" || type === "other") body += `<div class="photos">${photoSlot("receipt","Receipt photo")}</div>`;
+  if (type === "delivery") body += `<label class="f"><span>Load <em>(optional)</em></span><input class="in" id="fLoad" placeholder="Load 1"></label><div class="photos">${photoSlot("proof","Signed delivery photo")}</div>`;
+  if (type === "delay"){
+    const now = Date.now();
+    body += `<label class="f"><span>Where</span><input class="in" id="fLoc" placeholder="Warehouse or gate"></label>
+      <div class="two"><label class="f"><span>Started</span><input class="in" type="time" id="fStart" value="${hhmm(now - 36e5)}"></label>
+      <label class="f"><span>Ended</span><input class="in" type="time" id="fEnd" value="${hhmm(now)}"></label></div>`;
+  }
+  const noteLabel = type === "repair" ? "What was fixed" : type === "other" ? "What was it for" : "Note <em>(optional)</em>";
+  body += `<label class="f"><span>${noteLabel}</span><input class="in" id="fNote" placeholder="${type === "repair" ? "Air line fitting" : type === "other" ? "Overnight parking" : "Anything useful"}"></label>`;
+  body += `<div id="noReceipt"></div>`;
+  if (T.money) body += `<div class="toggle"><span>Personal expense<br><small style="color:var(--muted)">Not counted in business totals</small></span><input type="checkbox" id="fPersonal"></div>`;
+  body += `<button class="save" id="fSave">Save ${T.label.toLowerCase()}</button>`;
+  openSheet(T.label, body);
+  wirePhotos(f, check);
+  $("#shBody").querySelectorAll("input:not([type=file])").forEach(i => { i.addEventListener("input", check); i.addEventListener("change", check); });
+  const amt = $("#fAmt");
+
+  function vals(){
+    const v = {
+      amount: amt ? parseNum(amt.value) : null,
+      note: ($("#fNote")?.value || "").trim(), load: ($("#fLoad")?.value || "").trim(),
+      location: ($("#fLoc")?.value || "").trim(), personal: !!$("#fPersonal")?.checked
+    };
+    if (type === "delay"){
+      const [sh,sm] = ($("#fStart").value||"").split(":").map(Number), [eh,em] = ($("#fEnd").value||"").split(":").map(Number);
+      const s = new Date(); s.setHours(sh,sm,0,0); const e = new Date(); e.setHours(eh,em,0,0);
+      if (e < s) s.setDate(s.getDate()-1);
+      v.start = s.getTime(); v.mins = isNaN(sh) || isNaN(eh) ? NaN : Math.round((e - s)/6e4);
+    }
+    return v;
+  }
+  function check(){
+    const v = vals(), needs = [];
+    if (T.money && !(v.amount > 0)) needs.push({msg:"The amount", sel:"#fAmt"});
+    if ((type === "repair" || type === "other") && !v.note) needs.push({msg: type === "repair" ? "What was fixed" : "What it was for", sel:"#fNote"});
+    if (type === "delay"){
+      if (!v.location) needs.push({msg:"Where you were waiting", sel:"#fLoc"});
+      if (!(v.mins > 0)) needs.push({msg:"A start and end time", sel:"#fEnd"});
+    }
+    const flag = type === "repair" && !f.photos.receipt && !v.personal;
+    $("#noReceipt").innerHTML = flag ? `<div class="hint">No receipt photo? It will be flagged for owner review.</div>` : "";
+    if (tried) showNeeds(needs);
+    return {v, needs};
+  }
+  check();
+
+  $("#fSave").onclick = () => {
+    tried = true;
+    const {v, needs} = check();
+    if (needs.length){ $("#formErr").scrollIntoView({block:"start", behavior:"smooth"}); return; }
+    const btn = $("#fSave"); btn.disabled = true; btn.textContent = "Saving…";
+    const t = myTruck();
+    finishSave({
+      id: uid(), type, at: type === "delay" ? v.start : Date.now(), createdAt: Date.now(),
+      amount: T.money ? round(v.amount, 2) : null,
+      note: v.note || null, load: v.load || null, location: v.location || null,
+      mins: type === "delay" ? v.mins : null, personal: v.personal,
+      truckId: t ? t.id : null, truckName: t ? t.name : null,
+      receipt: f.photos.receipt || null, proof: f.photos.proof || null,
+      review: type === "repair" && !f.photos.receipt && !v.personal
+    }, btn, T.label);
+  };
+}
+
+/* ---------- Trip planning: free truck-route miles, then Google Maps ---------- */
+function mapsUrl(origin, dest){
+  const p = new URLSearchParams({api:"1", travelmode:"driving"});
+  if (dest) p.set("destination", typeof dest === "string" ? dest : `${dest.lat},${dest.lon}`);
+  if (origin && origin.typed) p.set("origin", `${origin.lat},${origin.lon}`);
+  return "https://www.google.com/maps/dir/?" + p.toString();
+}
+function hereNow(){
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error("nogeo"));
+    navigator.geolocation.getCurrentPosition(
+      p => res({lat:p.coords.latitude, lon:p.coords.longitude, label:"My location", typed:false}),
+      () => rej(new Error("nogeo")), {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
+  });
+}
+async function geocode(text, near){
+  const p = new URLSearchParams({api_key:ORS_KEY, text, size:"4", "boundary.country":"US"});
+  if (near){ p.set("focus.point.lat", near.lat); p.set("focus.point.lon", near.lon); }
+  const r = await fetch("https://api.openrouteservice.org/geocode/search?" + p);
+  if (r.status === 401 || r.status === 403) throw new Error("key");
+  if (r.status === 429) throw new Error("limit");
+  if (!r.ok) throw new Error("geo");
+  const j = await r.json();
+  return (j.features || []).map(f => ({lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0], label:f.properties.label, typed:true}));
+}
+async function routeMiles(a, b){
+  for (const profile of ["driving-hgv", "driving-car"]){
+    const p = new URLSearchParams({api_key:ORS_KEY, start:`${a.lon},${a.lat}`, end:`${b.lon},${b.lat}`});
+    const r = await fetch(`https://api.openrouteservice.org/v2/directions/${profile}?` + p);
+    if (r.status === 401 || r.status === 403) throw new Error("key");
+    if (r.status === 429) throw new Error("limit");
+    if (r.ok){
+      const j = await r.json();
+      const s = j.features && j.features[0] && j.features[0].properties && j.features[0].properties.summary;
+      if (s && s.distance) return {miles: s.distance / 1609.344, mins: (s.duration || 0) / 60, car: profile === "driving-car"};
+    }
+  }
+  throw new Error("noroute");
+}
+function tripError(err){
+  const m = err && err.message;
+  return m === "key" ? "The map key isn’t working. Check ORS_KEY in index.html."
+    : m === "limit" ? "Today’s free map limit is used up. Try again tomorrow, or just open Google Maps."
+    : m === "noroute" ? "Couldn’t find a route to that address."
+    : m === "nogeo" ? "Couldn’t get your location. Type a starting address in From."
+    : "Couldn’t look up the route. Check your signal and try again.";
+}
+function openTrip(){
+  const st = {origin:null, dest:null, route:null};
+  openSheet("Plan a trip", truckSelectHtml() + `
+    <label class="f"><span>From <em>(leave empty to use where you are now)</em></span><input class="in" id="tFrom" placeholder="My current location"></label>
+    <label class="f"><span>To</span><input class="in" id="tTo" placeholder="Delivery address or business name"></label>
+    <div id="tInfo"></div>
+    <button class="save" id="tGo">Get miles</button>
+    <button class="ghost" id="tMaps" type="button">Just open Google Maps</button>`);
+  wireAddTruck(openTrip);
+  const info = $("#tInfo"), go = $("#tGo");
+  if (!ORS_KEY) info.innerHTML = `<div class="hint">Trip miles need the free map key (see README). You can still open Google Maps.</div>`;
+  $("#tMaps").onclick = () => {
+    const to = $("#tTo").value.trim();
+    window.open(st.dest ? mapsUrl(st.origin, st.dest) : (to ? mapsUrl(null, to) : "https://www.google.com/maps"), "_blank", "noopener");
+  };
+  const reset = () => { st.route = null; st.dest = null; go.textContent = "Get miles"; go.onclick = find; if (ORS_KEY) info.innerHTML = ""; };
+  $("#tFrom").addEventListener("input", reset);
+  $("#tTo").addEventListener("input", reset);
+  if ($("#fTruck")) $("#fTruck").addEventListener("change", () => st.route && showRoute());
+  go.onclick = find;
+
+  async function find(){
+    if (!ORS_KEY){ toast("Add the free map key to get trip miles."); return; }
+    const toText = $("#tTo").value.trim(), fromText = $("#tFrom").value.trim();
+    if (!toText){ toast("Type where you’re going."); $("#tTo").focus(); return; }
+    go.disabled = true; go.textContent = "Finding the route…";
+    try {
+      if (fromText){
+        const o = await geocode(fromText);
+        if (!o.length) throw friendly("Couldn’t find the From address. Try adding the city.");
+        st.origin = o[0];
+      } else st.origin = await hereNow();
+      const options = await geocode(toText, st.origin);
+      if (!options.length) throw friendly("Couldn’t find that address. Try adding the city.");
+      if (options.length > 1){
+        info.innerHTML = `<p class="note" style="margin:0 0 8px">Which one?</p><div class="choices">${
+          options.map((o, i) => `<button class="choice" data-i="${i}">${esc(o.label)}</button>`).join("")}</div>`;
+        info.querySelectorAll(".choice").forEach(b => b.onclick = () => pick(options[+b.dataset.i]));
+        go.disabled = false; go.textContent = "Get miles";
+        return;
+      }
+      await pick(options[0]);
+    } catch (err) {
+      info.innerHTML = `<div class="hint">${esc(err && err.friendly ? err.message : tripError(err))}</div>`;
+      go.disabled = false; go.textContent = "Get miles";
+    }
+  }
+  async function pick(dest){
+    go.disabled = true; go.textContent = "Finding the route…";
+    try {
+      st.dest = dest;
+      st.route = await routeMiles(st.origin, dest);
+      showRoute();
+    } catch (err) {
+      info.innerHTML = `<div class="hint">${esc(tripError(err))}</div>`;
+      go.textContent = "Get miles"; go.onclick = find;
+    }
+    go.disabled = false;
+  }
+  function showRoute(){
+    const t = truckById($("#fTruck") ? $("#fTruck").value : ""), mpg = truckMpg(t), ppg = lastPpg();
+    const {miles, mins, car} = st.route;
+    const fuel = mpg && ppg ? miles / mpg * ppg : null;
+    info.innerHTML = `<div class="route">
+      <div class="route-big">${num1.format(miles)} miles</div>
+      <div>About ${fmtMins(mins)} ${car ? "(car route; no truck route was found)" : "on a truck-friendly route"}</div>
+      <div class="note">To ${esc(st.dest.label)}</div>
+      ${fuel ? `<div style="margin-top:6px">About <b>${usd0.format(fuel)}</b> in diesel (${num1.format(mpg)} mpg at ${usd.format(ppg)} a gallon)</div>`
+             : `<div class="note" style="margin-top:6px">${t ? "A diesel estimate shows up after this truck’s first fill-ups, or once it has an expected mpg." : "Choose the truck to see a diesel estimate."}</div>`}
+    </div>`;
+    go.textContent = "Save trip & open Google Maps";
+    go.onclick = save;
+  }
+  function save(){
+    const truckId = $("#fTruck") ? $("#fTruck").value : "";
+    if (!truckId){ toast("Choose the truck for this trip."); return; }
+    const t = truckById(truckId), mpg = truckMpg(t), ppg = lastPpg();
+    const {miles, mins, car} = st.route;
+    window.open(mapsUrl(st.origin, st.dest), "_blank", "noopener");
+    go.disabled = true; go.textContent = "Saving…";
+    setMyTruck(truckId);
+    finishSave({
+      id: uid(), type: "trip", at: Date.now(), createdAt: Date.now(),
+      truckId, truckName: t ? t.name : null,
+      fromLabel: st.origin.typed ? st.origin.label : "My location", toLabel: st.dest.label,
+      destLat: round(st.dest.lat, 6), destLon: round(st.dest.lon, 6),
+      plannedMiles: round(miles, 1), plannedMins: Math.round(mins),
+      estFuel: mpg && ppg ? round(miles / mpg * ppg, 2) : null, routeType: car ? "car" : "truck",
+      personal: false, review: false
+    }, go, "Trip");
+  }
+}
+
+
+
+/* ---------- Trucks and driver name ---------- */
+function openTrucks(after, welcome){
+  const cur = myTruck(), canRemove = ownerUnlocked();
+  const list = trucks.slice().sort(byName).map(t => {
+    const mpg = truckMpg(t);
+    const sub = [t.model, mpg ? `${num1.format(mpg)} mpg` : null].filter(Boolean).join(", ");
+    return `<li class="trow"><button class="tpick" data-id="${esc(t.id)}" aria-pressed="${!!(cur && cur.id === t.id)}"><span class="ic">🚛</span><span class="mid"><b>${esc(t.name)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span></button>${canRemove ? `<button class="tdel" data-del="${esc(t.id)}">Remove</button>` : ""}</li>`;
+  }).join("");
+  openSheet(welcome ? "Welcome to VMR Log" : "You and your truck", `
+    ${welcome ? `<p class="lsub">Two quick things so your entries are labeled. No account or password needed.</p>` : ""}
+    <label class="f"><span>Your name</span><input class="in" id="nDriver" placeholder="First name" value="${esc(driverName())}" autocomplete="given-name"></label>
+    ${trucks.length ? `<p class="note" style="margin:0 0 10px">Tap the truck you’re driving. This phone remembers it.</p><ul class="tlist">${list}</ul>` : ""}
+    <h4 class="sub-h">${trucks.length ? "Or add a truck" : "Add your truck"}</h4>
+    <div class="formerr" id="formErr" hidden></div>
+    <label class="f"><span>Truck name or number</span><input class="in" id="nName" placeholder="Truck 1"></label>
+    <label class="f"><span>Model <em>(optional)</em></span><input class="in" id="nModel" placeholder="2019 Freightliner Cascadia"></label>
+    <label class="f"><span>Expected miles per gallon <em>(optional)</em></span><input class="in" id="nMpg" inputmode="decimal" placeholder="6.5"></label>
+    <p class="note" style="margin:-6px 0 14px">Used for trip diesel estimates until the app learns the real number from fill-ups.</p>
+    <button class="save" id="nSave">Add truck</button>`);
+  $("#nDriver").addEventListener("input", () => { lsSet(NAME_KEY, $("#nDriver").value.trim()); renderTruckBar(); setStatus(); });
+  const done = () => { if (after) after(); else closeSheet(); };
+  $("#shBody").querySelectorAll(".tpick").forEach(b => b.onclick = () => {
+    setMyTruck(b.dataset.id); toast(`Driving ${truckById(b.dataset.id)?.name || "truck"}`); done();
+  });
+  $("#shBody").querySelectorAll(".tdel").forEach(b => {
+    let armed = false;
+    b.onclick = async () => {
+      if (!armed){ armed = true; b.textContent = "Tap to confirm"; return; }
+      try { await removeDoc("trucks", b.dataset.del); if (myTruckId() === b.dataset.del) setMyTruck(""); toast("Truck removed"); openTrucks(after); }
+      catch (err) { window.P2Diagnostics.record(err, "Update or delete record"); toast(explain(err)); }
+    };
+  });
+  $("#nSave").onclick = async () => {
+    const name = $("#nName").value.trim();
+    if (!name){ showNeeds([{msg:"A truck name or number, like Truck 1", sel:"#nName"}]); $("#formErr").scrollIntoView({block:"center", behavior:"smooth"}); return; }
+    const t = {id: uid(), name, model: $("#nModel").value.trim() || null, mpgEst: parseNum($("#nMpg").value) || null, lastOdo: null, createdAt: Date.now()};
+    try {
+      await saveDoc("trucks", t);
+      if (!trucks.find(x => x.id === t.id)) trucks = [...trucks, t];
+      setMyTruck(t.id); render(); toast(`${name} added`); done();
+    } catch (err) { window.P2Diagnostics.record(err, "Add truck"); const box = $("#formErr"); box.innerHTML = `<b>Couldn’t add the truck.</b> ${esc(explain(err))}`; box.hidden = false; }
+  };
+}
+
+/* ---------- Photos ---------- */
+function compress(file){
+  return new Promise((res, rej) => {
+    const img = new Image(); const u = URL.createObjectURL(file);
+    img.onload = () => {
+      try {
+      URL.revokeObjectURL(u);
+      let max = 900, q = .62, out;
+      for (let i = 0; i < 4; i++){
+        const s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas"); c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+        const ctx = c.getContext("2d");
+        if (!ctx){ rej(new Error("Photo processing is unavailable in this browser")); return; }
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL("image/jpeg", q);
+        if (out.length < 110000) break;
+        max = Math.round(max*.75); q -= .08;
+      }
+      res(out);
+      } catch (err) { rej(err); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); rej(); };
+    img.src = u;
+  });
+}
+function photosOf(e){
+  return [["Receipt", e.receipt], ["Odometer", e.odoPhoto || (isPhoto(e.odometer) ? e.odometer : null)], ["Signed delivery", e.proof]].filter(p => isPhoto(p[1]));
+}
+
+
+
+/* ---------- Entry detail and receipts ---------- */
+function canChange(e){ return ownerUnlocked() || !fb || (fb.user && e.uid === fb.user.uid); }
+function openDetail(id){
+  const e = entries.find(x => x.id === id); if (!e) return;
+  const T = TYPES[e.type] || TYPES.other;
+  const rows = [["When", `${fmtDay(e.at)}, ${fmtTime(e.at)}`]];
+  if (e.driver || e.by) rows.push(["Logged by", e.driver || e.by]);
+  if (e.truckName) rows.push(["Truck", e.truckName]);
+  if (T.money) rows.push(["Amount", usd.format(Number(e.amount)||0)]);
+  if (e.type === "diesel"){
+    if (e.odo) rows.push(["Odometer", num0.format(e.odo)]);
+    if (e.gallons) rows.push(["Gallons", num1.format(e.gallons)]);
+    if (e.ppg) rows.push(["Price per gallon", usd.format(e.ppg)]);
+    const ts = tankStats(e);
+    if (ts){ rows.push(["Miles since last fill-up", num0.format(ts.miles)]); if (ts.mpg) rows.push(["Miles per gallon", num1.format(ts.mpg)]); }
+  }
+  if (e.type === "trip"){
+    rows.push(["From", e.fromLabel || "My location"], ["To", e.toLabel || ""], ["Planned miles", num1.format(e.plannedMiles || 0)]);
+    if (e.plannedMins) rows.push(["Drive time", fmtMins(e.plannedMins)]);
+    if (e.estFuel) rows.push(["Diesel estimate", usd0.format(e.estFuel)]);
+    if (e.routeType === "car") rows.push(["Route", "Car route (no truck route found)"]);
+  }
+  if (e.type === "delay") rows.push(["Waited", fmtMins(e.mins||0)]);
+  if (e.load) rows.push(["Load", e.load]);
+  if (e.location) rows.push(["Where", e.location]);
+  if (e.note) rows.push([e.type === "repair" ? "Fixed" : "Note", e.note]);
+  if (e.personal) rows.push(["Type", "Personal, not in totals"]);
+  if (e.review) rows.push(["Status", "Needs owner review (no receipt)"]);
+  const pics = photosOf(e);
+  openSheet(T.label, `<div class="detail"><dl>${rows.map(r => `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>
+    ${e.type === "trip" && e.destLat ? `<button class="ghost" id="reopen" style="margin:0 0 12px">Open Google Maps again</button>` : ""}
+    ${e.review && ownerUnlocked() ? `<button class="ghost" id="approve" style="margin:0 0 12px">✓ Mark as reviewed</button>` : ""}
+    <div class="big">${pics.map((p,i) => `<div class="day">${esc(p[0])}</div><img data-i="${i}" alt="${esc(p[0])} photo">`).join("")}</div>
+    ${canChange(e) ? `<button class="del" id="del">Delete entry</button>` : ""}</div>`);
+  $("#shBody").querySelectorAll(".big img").forEach(im => im.src = pics[+im.dataset.i][1]);
+  if ($("#reopen")) $("#reopen").onclick = () => window.open(mapsUrl(null, {lat:e.destLat, lon:e.destLon}), "_blank", "noopener");
+  if ($("#approve")) $("#approve").onclick = async () => {
+    try { await saveDoc("entries", {...e, review: false, reviewedAt: Date.now()}, true); closeSheet(); toast("Marked as reviewed"); }
+    catch (err) { window.P2Diagnostics.record(err, "Update or delete record"); toast(explain(err)); }
+  };
+  let armed = false;
+  if ($("#del")) $("#del").onclick = async () => {
+    if (!armed){ armed = true; $("#del").textContent = "Tap again to delete"; return; }
+    try { await removeDoc("entries", e.id); closeSheet(); toast("Entry deleted"); } catch (err) { window.P2Diagnostics.record(err, "Update or delete record"); toast(explain(err)); }
+  };
+}
+function openReceipts(){
+  const pics = [];
+  entries.slice().sort((a,b) => b.at - a.at).forEach(e => photosOf(e).forEach(p => pics.push({p:p[1], id:e.id})));
+  if (!pics.length){ openSheet("Receipts", `<div class="empty">No photos yet. Receipts and odometer photos you add when logging show up here.</div>`); return; }
+  openSheet("Receipts", `<div class="gallery">${pics.map((x,i) => `<button data-id="${esc(x.id)}" aria-label="Open entry"><img data-i="${i}" alt=""></button>`).join("")}</div>`);
+  $("#shBody").querySelectorAll(".gallery img").forEach(im => im.src = pics[+im.dataset.i].p);
+  $("#shBody").querySelectorAll(".gallery button").forEach(b => b.onclick = () => openDetail(b.dataset.id));
+}
+
+/* ---------- Wire up ---------- */
+$("#logBtn").onclick = openPicker;
+$("#tReceipts").onclick = openReceipts;
+$("#tTrip").onclick = openTrip;
+$("#tOwner").onclick = openOwner;
+$("#truckBar").onclick = () => openTrucks();
+$("#sync").onclick = openStatus;
+$("#alertRetry").onclick = () => location.reload();
+$("#oBack").onclick = hideOwner;
+$("#oLock").onclick = lockOwner;
+$("#opWeek").onclick = () => { ownerPeriod = "week"; renderOwner(); };
+$("#opMonth").onclick = () => { ownerPeriod = "month"; renderOwner(); };
+document.querySelectorAll("[data-later]").forEach(b => b.onclick = () => toast(`${b.dataset.later} is planned for a later sprint`));
+$("#pDay").onclick = () => { period = "day"; render(); };
+$("#pWeek").onclick = () => { period = "week"; render(); };
+$("#list").addEventListener("click", ev => { const r = ev.target.closest(".row"); if (r) openDetail(r.dataset.id); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !document.getElementById("p2Dialog").open) closeSheet(); });
+
+/* ---------- Install button ---------- */
+(() => {
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const ownSite = false && location.protocol === "https:" && !/claude\.ai|claudeusercontent/.test(location.hostname);
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const KEY = "vmr-install-later";
+  let promptEvent = null;
+  function snoozed(){ try { return Date.now() - Number(localStorage.getItem(KEY) || 0) < 7*864e5; } catch { return false; } }
+  function show(){ if (!standalone && ownSite && !snoozed()) $("#install").hidden = false; }
+  function hide(){ $("#install").hidden = true; }
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); promptEvent = e; show(); });
+  window.addEventListener("appinstalled", hide);
+  if (isIOS) show();
+  $("#installX").onclick = () => { hide(); try { localStorage.setItem(KEY, String(Date.now())); } catch {} };
+  $("#installBtn").onclick = async () => {
+    if (promptEvent){
+      promptEvent.prompt();
+      const choice = await promptEvent.userChoice.catch(() => null);
+      promptEvent = null;
+      if (choice && choice.outcome === "accepted") hide();
+      return;
+    }
+    openSheet("Add to Home Screen", isIOS
+      ? `<ol class="steps">
+           <li>Tap the <b>Share</b> button (a square with an arrow pointing up). If you don’t see it, tap the three dots first.</li>
+           <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+           <li>Tap <b>Add</b>. The green VMR icon appears on your home screen.</li>
+         </ol><p>Open VMR from that icon from now on. Your entries stay safest there.</p>`
+      : `<ol class="steps">
+           <li>Tap the browser menu (three dots).</li>
+           <li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li>
+           <li>Tap <b>Install</b>. The green VMR icon appears on your home screen.</li>
+         </ol>`);
+  };
+})();
+
+/* Offline support when hosted on its own site (GitHub Pages) */
+if (false && "serviceWorker" in navigator && location.protocol === "https:" && !/claude\.ai|claudeusercontent/.test(location.hostname)) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+
+setStatus();
+render();
+connect().catch(problem);
+})();
+</script>
+</body>
+</html>
